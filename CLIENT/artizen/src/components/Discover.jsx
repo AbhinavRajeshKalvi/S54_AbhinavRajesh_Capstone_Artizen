@@ -116,7 +116,7 @@ const ArtworkGrid = () => {
       [name]: value,
     }));
   };
-
+  //handle search
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
