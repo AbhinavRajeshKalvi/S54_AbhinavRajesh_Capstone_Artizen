@@ -4,27 +4,36 @@ import Modal from 'react-modal';
 import { motion } from "framer-motion"; 
 import { useClerk } from '@clerk/clerk-react';
 import { useDropzone } from 'react-dropzone';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 import 'react-toastify/dist/ReactToastify.css';
 import uploadIcon from '../assets/uploadicon.png';
 import { addImageToCloudinary } from './cloudinary';
 import { toast } from 'react-toastify';
-import Masonry from "react-responsive-masonry"
+import Masonry from "react-responsive-masonry";
 
 Modal.setAppElement('#root');
 
-const ArtworkGrid = ({ selectedCategory }) => {
-  
+const ArtworkGrid = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryParams = new URLSearchParams(location.search);
+  const selectedCategory = queryParams.get('category') || ''; 
+
   const { user } = useClerk();
-  console.log(user);
-  const [users, setUser] = useState([]);
+  const [users, setUsers] = useState([]); 
   const [artworks, setArtworks] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const containerRef = useRef(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [userData, setUserData] = useState({
     username: '',
     pfp: '',
-  })
+  });
+
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -32,6 +41,7 @@ const ArtworkGrid = ({ selectedCategory }) => {
     description: '',
     author: '',
   });
+
   const categories = [
     { title: 'Painting', id: 1 },
     { title: 'Drawing', id: 2 },
@@ -40,50 +50,42 @@ const ArtworkGrid = ({ selectedCategory }) => {
     { title: 'Photography', id: 5 }
   ];
 
-  const [imagePreview, setImagePreview] = useState(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  useEffect(() => {
+    Modal.setAppElement('#root');
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (category) => {
       try {
         const responseUser = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/users`);
-        setUser(responseUser.data);
-        console.log(responseUser.data)
-        if (selectedCategory){
-          const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/data/artworks?category=${selectedCategory}`);
-          setArtworks(response.data);
-        } else {
-          const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/data/artworks`);
-          setArtworks(response.data);
-        }
+        setUsers(responseUser.data); 
+        
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/data/artworks`, {
+          params: category ? { category } : {}
+        });
+
+        setArtworks(response.data);
       } catch (error) {
         console.error('Error fetching artworks:', error);
         toast.error('Failed to fetch artworks. Please try again later.');
       }
     };
 
-    fetchData();
+    fetchData(selectedCategory);
 
     const handleResize = () => {
       if (containerRef.current) {
         setContainerWidth(containerRef.current.offsetWidth);
       }
     };
+    
     window.addEventListener('resize', handleResize);
     handleResize();
+    
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [selectedCategory, setUser]);
-
-  useEffect(() => {
-    if (user) {
-      setFormData(prevState => ({
-        ...prevState,
-        author: user.fullName
-      }));
-    }
-  }, [user]);
+  }, [selectedCategory]);
 
   useEffect(() => {
     if (user) {
@@ -91,8 +93,21 @@ const ArtworkGrid = ({ selectedCategory }) => {
         username: user.fullName,
         pfp: user.imageUrl
       });
+
+      setFormData(prevState => ({
+        ...prevState,
+        author: user.fullName
+      }));
     }
   }, [user]);
+
+  const handleSelectCategory = (category) => {
+    if (selectedCategory === category) {
+      navigate('/discover'); 
+    } else {
+      navigate(`/discover?category=${category}`);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -102,15 +117,20 @@ const ArtworkGrid = ({ selectedCategory }) => {
     }));
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
   const handleUpload = async () => {
+    if (!formData.title || !formData.category || !formData.image || !formData.description) {
+      toast.error("All fields are required.");
+      return;
+    }
+
     try {
-      // Check if user's fullName exists in the users array
       const usernames = users.map(u => u.username);
       const isUserExist = usernames.includes(user.fullName);
 
-      console.log(isUserExist)
-
-      // If user doesn't exist in the users array, post user data to the database
       if (!isUserExist) {
         await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/signup`, {
           username: user.fullName,
@@ -118,12 +138,11 @@ const ArtworkGrid = ({ selectedCategory }) => {
         });
       }
 
-      // Upload artwork
       const imageUrl = await addImageToCloudinary(formData.image);
       formData.image = imageUrl[0];
+
       await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/artworks`, formData);
 
-      // Reset form data
       setFormData({
         title: '',
         category: '',
@@ -132,7 +151,6 @@ const ArtworkGrid = ({ selectedCategory }) => {
         description: '',
       });
 
-      // Close modal and show success message
       toast.success('Artwork Submitted Successfully');
       setModalIsOpen(false);
     } catch (error) {
@@ -146,36 +164,62 @@ const ArtworkGrid = ({ selectedCategory }) => {
       toast.error('Please sign in to upload artwork.');
       return;
     }
-    console.log(users)
     setModalIsOpen(true);
   };
 
   const onDrop = (acceptedFiles) => {
-    setFormData((prevState) => ({
-      ...prevState,
-      image: acceptedFiles[0],
-    }));
-    setImagePreview(URL.createObjectURL(acceptedFiles[0]));
+    if (acceptedFiles.length > 0) {
+      setFormData((prevState) => ({
+        ...prevState,
+        image: acceptedFiles[0],
+      }));
+      setImagePreview(URL.createObjectURL(acceptedFiles[0]));
+    }
   };
+
   const { getRootProps, getInputProps } = useDropzone({ onDrop });
 
+  const filteredArtworks = artworks.filter(artwork =>
+    artwork.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <>
       <div className="container" ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <h1 className="discover-hero-text" style={{fontSize:'5vw',marginBottom:'4vh'}}>Discover</h1>
         <div>
-          <input placeholder='Search' style={{marginBottom:'5vh',width:'40vw',borderRadius:'50px',height:'5vh',paddingLeft:'1.3vw',fontSize:'1.5vw',border:'none'}} type="text" name="" id="" />
+          <input
+            placeholder='Search'
+            style={{marginBottom:'5vh',width:'40vw',borderRadius:'50px',height:'5vh',paddingLeft:'1.3vw',fontSize:'1.5vw',border:'none'}}
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+          />
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'30px',marginBottom:'10vh'}}>
-          {categories.map (card => (
-            <div style={{color:'white',background:'#222222',width:'10vw',height:'6vh',borderRadius:'50px',display:'flex',justifyContent:'center',alignItems:'center',fontSize:'1.2vw',cursor:'pointer'}} onClick={() => handleSelectCategory(card.title)}>
-              {card.title}
-            </div>
-          ))}
-        </div>
+        {categories.map(card => (
+          <div
+            key={card.id}
+            style={{
+              color: 'white',
+              background: selectedCategory === card.title ? '#555555' : '#222222', // Change color if selected
+              width: '10vw',
+              height: '6vh',
+              borderRadius: '50px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              fontSize: '1.2vw',
+              cursor: 'pointer'
+            }}
+            onClick={() => handleSelectCategory(card.title)}
+          >
+            {card.title}
+          </div>
+        ))}
+      </div>
           <Masonry columnsCount={3} gutter="20px">
-                {artworks.map((image, i) => (
+                {filteredArtworks.map((image, i) => (
                     <img
                         key={i}
                         src={image.image}
