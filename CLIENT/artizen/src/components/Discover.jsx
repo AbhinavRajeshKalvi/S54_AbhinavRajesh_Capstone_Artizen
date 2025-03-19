@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Modal from 'react-modal';
-import { motion } from "framer-motion";
+import { motion } from "framer-motion"; 
 import { useClerk } from '@clerk/clerk-react';
 import { useDropzone } from 'react-dropzone';
 import '../App.css';
@@ -9,7 +9,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import uploadIcon from '../assets/uploadicon.png';
 import { addImageToCloudinary } from './cloudinary';
 import { toast } from 'react-toastify';
-import { useLocation, useParams } from 'react-router-dom';
 import Masonry from "react-responsive-masonry"
 
 Modal.setAppElement('#root');
