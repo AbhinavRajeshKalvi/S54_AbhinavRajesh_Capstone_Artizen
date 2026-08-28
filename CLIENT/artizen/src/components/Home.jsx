@@ -54,10 +54,9 @@ const Home = () => {
               <div className='discover-section-text'>
                 <h2 className='sub-heading'>DISCOVER</h2>
                 <p>
-                  Lorem ipsum dolor sit amet consectetur. Commodo morbi egestas lectus ultrices sem vel. 
-                  Id sem sollicitudin mi tristique duis parturient consequat aenean ut. 
-                  Scelerisque id donec potenti dui aliquet. Enim ac habitant vivamus mattis egestas nisi sagittis. 
-                  Id dui venenatis sed
+                  Explore a world of creativity where artists bring their ideas to life.
+  Discover unique artworks, connect with talented creators, and find inspiration
+  across different styles, mediums, and perspectives.
                 </p>
               </div>
             </div>
