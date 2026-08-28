@@ -14,6 +14,7 @@ const Home = () => {
   const [testimonials, setTestimonials] = useState([]);
   const [users, setUsers] = useState([]);
   const parallaxRef = useRef();
+  const carouselRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,9 +80,15 @@ const Home = () => {
               <div className='testimonial-section-text'>
                 <h2 className='sub-heading'>TESTIMONIALS</h2>
                 <h5>From Users</h5>
-                <Carousel className='carousel-div' showStatus={false} showArrows={false} interval={3000} infiniteLoop autoPlay>
+                <Carousel ref={carouselRef} key={testimonials.length} className='carousel-div' showStatus={false} showArrows={false} interval={3000} infiniteLoop autoPlay centerMode centerSlidePercentage={60}>
                   {testimonials.map((testimonial, index) => (
-                    <div  className='home-testimonial-container'>
+                    <div
+                      className='home-testimonial-container'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        carouselRef.current.moveTo(index);
+                      }}
+                    >
                     <div key={index}>
                       <div className='home-testimonial-container-header'>
                       {users.map(user => user.username === testimonial.author && (
@@ -109,7 +116,7 @@ const Home = () => {
               </div>
             </div>
           </ParallaxLayer>
-          <ParallaxLayer offset={2.45} speed={1}>
+          <ParallaxLayer offset={2.2} speed={1}>
             <Box as="footer" textAlign="center" py="4" color="white" fontFamily='heverly' letterSpacing='3px'>
               <Text>© 2024 Artizen. All Rights Reserved.</Text>
             </Box>
